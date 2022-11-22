@@ -2,94 +2,42 @@ package symbolizer
 
 import "unicode"
 
-// LexerOption represents an option to modify the Lexer behaviour.
-// It must be provided with the constructor for Lexer.
-type LexerOption func(config *lexerConfig) error
-
-// Keywords returns a LexerOption that can be used to provide the Lexer
-// with a set of special keywords mapped to some custom TokenKind value.
-// If the Lexer encounters identifiers that match any of the given keywords,
-// It returns a Token with the given kind and the actual literal encountered.
-//
-// Note: Use TokenKind values less than -10 for custom Token classes.
-// -10 to -1 are reserved for standard token classes while 0 and above correspond the unicode code points.
-func Keywords(keywords map[string]TokenKind) LexerOption {
-	return func(config *lexerConfig) error {
-		config.keywords = keywords
-
-		return nil
-	}
-}
-
-// IgnoreWhitespaces returns a LexerOption that specifies the Lexer to ignore unicode characters with the
-// whitespace property (' ', '\t', '\n', '\r', etc). They are consumed instead of generating Tokens for them.
-func IgnoreWhitespaces() LexerOption {
-	return func(config *lexerConfig) error {
-		config.eatSpaces = true
-
-		return nil
-	}
-}
-
-// Lexer is a lexical analyser that can tokenize a given string input into its unicode
+// lexer is a lexical analyser that can tokenize a given string input into its unicode
 // characters while also generating tokens for identifiers, strings and numerics symbols.
-type Lexer struct {
+type lexer struct {
 	cursor  int
 	symbols []rune
-	config  *lexerConfig
+	config  *parseConfig
 }
 
-// lexerConfig is an internal configuration object for the
-// Lexer that are modified using LexerOption functions
-type lexerConfig struct {
-	eatSpaces bool
-	keywords  map[string]TokenKind
-}
-
-// NewLexer generates a new Lexer for a given string input and some LexerOption functions.
-// Use the Keywords option to specify custom symbols to treat as keywords/identifiers.
-func NewLexer(input string, opts ...LexerOption) (lexer *Lexer, err error) {
-	// Create a new lexerConfig and apply all the given options on it
-	config := new(lexerConfig)
-	for _, option := range opts {
-		_ = option(config)
-	}
-
-	// Convert the input string into a slice of runes (unicode codepoints)
-	return &Lexer{
-		config:  config,
-		symbols: []rune(input),
-	}, nil
-}
-
-// Symbol returns the unicode symbols that is currently under the Lexer's cursor.
+// char returns the unicode symbols that is currently under the Lexer's cursor.
 // If the Lexer tape is exhausted, an EoF rune is returned.
-func (lexer *Lexer) Symbol() rune {
-	if lexer.Done() {
+func (lexer *lexer) char() rune {
+	if lexer.done() {
 		return rune(TokenEoF)
 	}
 
 	return lexer.symbols[lexer.cursor]
 }
 
-// PeekSymbol returns the unicode symbol that is ahead of the Lexer's cursor.
+// peek returns the unicode symbol that is ahead of the Lexer's cursor.
 // This look ahead is performed without moving the Lexer's cursor.
 // If the Lexer tap is exhausted, an EoF rune is returned.
-func (lexer *Lexer) PeekSymbol() rune {
-	if lexer.Done() {
+func (lexer *lexer) peek() rune {
+	if lexer.done() {
 		return rune(TokenEoF)
 	}
 
 	return lexer.symbols[lexer.cursor+1]
 }
 
-// Tokens returns all the remaining Tokens in the Lexer, by parsing
+// tokens returns all the remaining Tokens in the lexer, by parsing
 // through the rest of the input until it encounters an EoF.
-// Note that if the Lexer has already ingested some symbols, the
+// Note that if the lexer has already ingested some symbols, the
 // returned Tokens do not represent all the Tokens for a given input.
-func (lexer *Lexer) Tokens() (tokens []Token) {
+func (lexer *lexer) tokens() (tokens []Token) {
 	for {
-		token := lexer.Next()
+		token := lexer.next()
 		tokens = append(tokens, token)
 
 		if token.Kind == TokenEoF {
@@ -100,14 +48,13 @@ func (lexer *Lexer) Tokens() (tokens []Token) {
 	return tokens
 }
 
-// Done returns whether the Lexer tape is exhausted i.e., EoF has been reached
-func (lexer *Lexer) Done() bool {
+// done returns whether the Lexer tape is exhausted i.e., EoF has been reached
+func (lexer *lexer) done() bool {
 	return lexer.cursor >= len(lexer.symbols)
 }
 
-// Next advances the Lexer's cursor and returns the encountered Token.
-// Whitespaces are consumed by default
-func (lexer *Lexer) Next() Token {
+// next advances the Lexer's cursor and returns the encountered Token.
+func (lexer *lexer) next() Token {
 	// If lexer configuration specifies to ignore whitespaces, consume them
 	if lexer.config.eatSpaces {
 		lexer.consumeSpaces()
@@ -116,7 +63,7 @@ func (lexer *Lexer) Next() Token {
 	var token Token
 
 	// Get the current symbol of the Lexer and check conditions
-	switch symbol := lexer.Symbol(); {
+	switch symbol := lexer.char(); {
 	// End of File
 	case symbol == rune(TokenEoF):
 		token = EOFToken()
@@ -145,18 +92,18 @@ func (lexer *Lexer) Next() Token {
 }
 
 // advanceCursor increments the Lexer's cursor
-func (lexer *Lexer) advanceCursor() { lexer.cursor++ }
+func (lexer *lexer) advanceCursor() { lexer.cursor++ }
 
 // collectFrom collects all symbols from a specified index
 // until the current cursor position and return it as a string
-func (lexer *Lexer) collectFrom(start int) string {
+func (lexer *lexer) collectFrom(start int) string {
 	return string(lexer.symbols[start:lexer.cursor])
 }
 
 // consumeSpaces moves its cursor to the next character by skips all unicode whitespaces in between.
-func (lexer *Lexer) consumeSpaces() {
+func (lexer *lexer) consumeSpaces() {
 	// Iterate until the read character is a whitespace
-	for unicode.IsSpace(lexer.Symbol()) {
+	for unicode.IsSpace(lexer.char()) {
 		lexer.advanceCursor()
 	}
 }
@@ -165,7 +112,7 @@ func (lexer *Lexer) consumeSpaces() {
 // If there exists rule entry for the identifier, then the TokenKind
 // in the rule is returned, otherwise the literal is treated as a
 // regular identifier and TokenIdentifier is returned.
-func (lexer *Lexer) lookupKeyword(ident string) TokenKind {
+func (lexer *lexer) lookupKeyword(ident string) TokenKind {
 	// If no keywords available, immediately return TokenIdentifier
 	if lexer.config.keywords == nil {
 		return TokenIdentifier
@@ -182,12 +129,12 @@ func (lexer *Lexer) lookupKeyword(ident string) TokenKind {
 
 // scanIdentOrKeyword scans for an Identifier token, If the literal has a special
 // TokenKind in the keyword registry, the returned Token has the appropriate TokenKind.
-func (lexer *Lexer) scanIdentOrKeyword() Token {
+func (lexer *lexer) scanIdentOrKeyword() Token {
 	// Retrieve the starting position of the identifier
 	start := lexer.cursor
 
 	// Iterate over the input until characters are letters
-	for unicode.IsLetter(lexer.Symbol()) || unicode.IsDigit(lexer.Symbol()) || lexer.Symbol() == '_' {
+	for unicode.IsLetter(lexer.char()) || unicode.IsDigit(lexer.char()) || lexer.char() == '_' {
 		lexer.advanceCursor()
 	}
 
@@ -198,7 +145,7 @@ func (lexer *Lexer) scanIdentOrKeyword() Token {
 }
 
 // scanString scans for a String token by collecting characters until another '"' is encountered.
-func (lexer *Lexer) scanString() Token {
+func (lexer *lexer) scanString() Token {
 	// Retrieve the starting position of the number (after the ")
 	start := lexer.cursor + 1
 
@@ -206,7 +153,7 @@ func (lexer *Lexer) scanString() Token {
 	for {
 		lexer.advanceCursor()
 
-		if lexer.Symbol() == '"' || lexer.Symbol() == rune(TokenEoF) {
+		if lexer.char() == '"' || lexer.char() == rune(TokenEoF) {
 			break
 		}
 	}
@@ -218,8 +165,8 @@ func (lexer *Lexer) scanString() Token {
 // scanNumeric scans for a Numeric token (decimal or hexadecimal).
 // If it encounters '0x', it will attempt to read the rest of the
 // character as hexadecimal using scanHexadecimal
-func (lexer *Lexer) scanNumeric() Token {
-	if lexer.Symbol() == '0' && lexer.PeekSymbol() == 'x' {
+func (lexer *lexer) scanNumeric() Token {
+	if lexer.char() == '0' && lexer.peek() == 'x' {
 		lexer.advanceCursor()
 		lexer.advanceCursor()
 
@@ -230,7 +177,7 @@ func (lexer *Lexer) scanNumeric() Token {
 	start := lexer.cursor
 
 	// Iterate over the input until characters are decimal characters
-	for isDecChar(lexer.Symbol()) {
+	for isDecChar(lexer.char()) {
 		lexer.advanceCursor()
 	}
 
@@ -240,12 +187,12 @@ func (lexer *Lexer) scanNumeric() Token {
 
 // scanHexadecimal scans for a Hex Numeric Token. It must be invoked after
 // encountering a '0x' and attempts to read hex characters A-F, a-f, 0-9.
-func (lexer *Lexer) scanHexadecimal() Token {
+func (lexer *lexer) scanHexadecimal() Token {
 	// Retrieve the starting position of the identifier
 	start := lexer.cursor
 
 	// Iterate over the input until characters are hex characters
-	for isHexChar(lexer.Symbol()) {
+	for isHexChar(lexer.char()) {
 		lexer.advanceCursor()
 	}
 

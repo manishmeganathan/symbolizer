@@ -148,28 +148,22 @@ func TestLexer(t *testing.T) {
 
 	t.Run("Standard Lexer", func(t *testing.T) {
 		for _, test := range tests {
-			lexer, err := NewLexer(test.input)
-
-			assert.Nil(t, err)
-			assert.Equal(t, test.standardOutput, lexer.Tokens())
+			lex := lexer{0, []rune(test.input), &parseConfig{eatSpaces: false, keywords: nil}}
+			assert.Equal(t, test.standardOutput, lex.tokens())
 		}
 	})
 
 	t.Run("No Spaces Lexer", func(t *testing.T) {
 		for _, test := range tests {
-			lexer, err := NewLexer(test.input, IgnoreWhitespaces())
-
-			assert.Nil(t, err)
-			assert.Equal(t, test.noSpaceOutput, lexer.Tokens())
+			lex := lexer{0, []rune(test.input), &parseConfig{eatSpaces: true, keywords: nil}}
+			assert.Equal(t, test.noSpaceOutput, lex.tokens())
 		}
 	})
 
 	t.Run("Custom Keyword Lexer", func(t *testing.T) {
 		for _, test := range tests {
-			lexer, err := NewLexer(test.input, Keywords(customKeywords))
-
-			assert.Nil(t, err)
-			assert.Equal(t, test.customOutput, lexer.Tokens())
+			lex := lexer{0, []rune(test.input), &parseConfig{eatSpaces: false, keywords: customKeywords}}
+			assert.Equal(t, test.customOutput, lex.tokens())
 		}
 	})
 }
