@@ -1,5 +1,7 @@
 package symbolizer
 
+import "fmt"
+
 // Parser is a symbol parser that parse a given string input and handle
 // operations like unwrapping enclosed data or splitting by a given delimiter
 type Parser struct {
@@ -104,4 +106,48 @@ Loop:
 	}
 
 	return splits
+}
+
+// Unwrap attempts to unravel a substring enclosed between to characters described with an Enclosure.
+// When calling Unwrap, the parse cursor must be the opening character of the given Enclosure. Returns
+// an error if the opening character is not found or if the symbol terminates before the closing character.
+//
+// Note: Unwrap will resolve nested enclosures attempting to match one
+// opening character with one closing character until it fully resolves.
+func (parser *Parser) Unwrap(enc Enclosure) (string, error) {
+	// Require the current token of the parser to be the enclosure opening token
+	if !parser.IsCursor(TokenKind(enc.start)) {
+		return "", fmt.Errorf("missing start of enclosure: '%v'", string(enc.start))
+	}
+
+	// Record the start of the enclosed data (1 position after enclose opener)
+	start := parser.curr.Position + 1
+	// First enclose opener sets the nesting level to 1.
+	// This nesting level needs to be resolved for the enclosure to "end"
+	nesting := 1
+
+	// Advance the cursor into the enclosed data.
+	parser.Advance()
+
+	for {
+		switch parser.Cursor().Kind {
+		case TokenKind(enc.start):
+			// Increase nesting level, if new enclosure start is encountered
+			nesting++
+		case TokenKind(enc.stop):
+			// Reduce nesting level, if new enclosure end is encountered
+			nesting--
+
+		case TokenEoF:
+			// premature end of symbol
+			return "", fmt.Errorf("missing end of enclosure: '%v'", string(enc.stop))
+		}
+
+		if nesting == 0 {
+			// If nesting is resolved, slice input and return
+			return parser.scanner.collectBetween(start, parser.curr.Position), nil
+		}
+
+		parser.Advance()
+	}
 }
