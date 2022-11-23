@@ -1,6 +1,9 @@
 package symbolizer
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // TokenKind is an enum for representing token grouping/values.
 // For unicode tokens, the TokenKind is equal to its code point value.
@@ -16,6 +19,28 @@ const (
 	TokenString
 	TokenHexNumber
 )
+
+// String implements the Stringer interface for TokenKind
+func (kind TokenKind) String() string {
+	if kind > 0 {
+		return fmt.Sprintf("<unicode:'%v'>", string(kind))
+	}
+
+	switch kind {
+	case TokenEoF:
+		return "<eof>"
+	case TokenIdentifier:
+		return "<ident>"
+	case TokenNumber:
+		return "<num>"
+	case TokenString:
+		return "<str>"
+	case TokenHexNumber:
+		return "<hex>"
+	default:
+		return fmt.Sprintf("<custom:%d>", kind)
+	}
+}
 
 // Token represents a lexical Token.
 // It may be either a lone unicode character or some literal value

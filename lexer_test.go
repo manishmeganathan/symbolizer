@@ -167,3 +167,24 @@ func TestLexer(t *testing.T) {
 		}
 	})
 }
+
+func TestTokenKind_String(t *testing.T) {
+	tests := []struct {
+		token  TokenKind
+		output string
+	}{
+		{TokenKind('5'), "<unicode:'5'>"},
+		{TokenKind('&'), "<unicode:'&'>"},
+		{TokenKind(-10), "<custom:-10>"},
+		{TokenEoF, "<eof>"},
+		{TokenNumber, "<num>"},
+		{TokenIdentifier, "<ident>"},
+		{TokenString, "<str>"},
+		{TokenHexNumber, "<hex>"},
+	}
+
+	for _, test := range tests {
+		str := test.token.String()
+		assert.Equal(t, test.output, str)
+	}
+}
