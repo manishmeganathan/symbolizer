@@ -5,8 +5,8 @@ package symbolizer
 type Parser struct {
 	// scanner represents the token scanner
 	scanner *lexer
-	// trail represents a trailing cursor indicating the beginning of the current Token
-	trail int
+	// // trail represents a trailing cursor indicating the beginning of the current Token
+	// trail int
 	// curr and next represent the current and next Token values
 	curr, next Token
 }
@@ -40,13 +40,11 @@ func (parser *Parser) Cursor() Token { return parser.curr }
 
 // Unparsed returns the remaining unparsed data in the parser as a string
 func (parser *Parser) Unparsed() string {
-	return string(parser.scanner.symbols)[parser.trail:]
+	return string(parser.scanner.symbols)[parser.curr.Position:]
 }
 
 // Advance moves the parser's cursor and peek tokens
 func (parser *Parser) Advance() {
-	parser.trail += len(parser.curr.Value)
-
 	parser.curr = parser.next
 	parser.next = parser.scanner.next()
 }
@@ -79,6 +77,7 @@ func (parser *Parser) ExpectPeek(t TokenKind) bool {
 
 // Split attempts to split the remaining contents of the parser
 // into a set of strings separated by the given delimiting TokenKind.
+// This process exhausts the parser consuming all the tokens within it.
 func (parser *Parser) Split(delimiter TokenKind) (splits []string) {
 	var accumulator string
 
@@ -98,7 +97,7 @@ Loop:
 
 		default:
 			// Accumulate character
-			accumulator += parser.curr.Value
+			accumulator += parser.curr.Literal
 		}
 
 		parser.Advance()

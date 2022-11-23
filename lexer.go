@@ -54,19 +54,17 @@ func (lexer *lexer) done() bool {
 }
 
 // next advances the Lexer's cursor and returns the encountered Token.
-func (lexer *lexer) next() Token {
+func (lexer *lexer) next() (token Token) {
 	// If lexer configuration specifies to ignore whitespaces, consume them
 	if lexer.config.eatSpaces {
 		lexer.consumeSpaces()
 	}
 
-	var token Token
-
 	// Get the current symbol of the Lexer and check conditions
 	switch symbol := lexer.char(); {
 	// End of File
 	case symbol == rune(TokenEoF):
-		token = EOFToken()
+		token = EOFToken(lexer.cursor)
 
 	// Quotes -> Scan for String
 	case symbol == '"':
@@ -82,7 +80,7 @@ func (lexer *lexer) next() Token {
 
 	default:
 		// Generate a token for the Unicode symbol
-		token = UnicodeToken(symbol)
+		token = UnicodeToken(symbol, lexer.cursor)
 	}
 
 	// Push the cursor for the next iteration
@@ -94,10 +92,10 @@ func (lexer *lexer) next() Token {
 // advanceCursor increments the Lexer's cursor
 func (lexer *lexer) advanceCursor() { lexer.cursor++ }
 
-// collectFrom collects all symbols from a specified index
+// collectBetween collects all symbols from a specified index
 // until the current cursor position and return it as a string
-func (lexer *lexer) collectFrom(start int) string {
-	return string(lexer.symbols[start:lexer.cursor])
+func (lexer *lexer) collectBetween(start, stop int) string {
+	return string(lexer.symbols[start:stop])
 }
 
 // consumeSpaces moves its cursor to the next character by skips all unicode whitespaces in between.
@@ -139,9 +137,13 @@ func (lexer *lexer) scanIdentOrKeyword() Token {
 	}
 
 	// Extract the identifier from the input with the start and current position
-	identifier := lexer.collectFrom(start)
+	identifier := lexer.collectBetween(start, lexer.cursor)
 
-	return Token{Kind: lexer.lookupKeyword(identifier), Value: identifier}
+	return Token{
+		Kind:     lexer.lookupKeyword(identifier),
+		Literal:  identifier,
+		Position: start,
+	}
 }
 
 // scanString scans for a String token by collecting characters until another '"' is encountered.
@@ -159,7 +161,11 @@ func (lexer *lexer) scanString() Token {
 	}
 
 	// Extract the string from input and set as text token literal
-	return Token{Kind: TokenString, Value: lexer.collectFrom(start)}
+	return Token{
+		Kind:     TokenString,
+		Literal:  lexer.collectBetween(start, lexer.cursor),
+		Position: start - 1,
+	}
 }
 
 // scanNumeric scans for a Numeric token (decimal or hexadecimal).
@@ -182,7 +188,11 @@ func (lexer *lexer) scanNumeric() Token {
 	}
 
 	// Extract the number from input and set as number token literal
-	return Token{Kind: TokenNumber, Value: lexer.collectFrom(start)}
+	return Token{
+		Kind:     TokenNumber,
+		Literal:  lexer.collectBetween(start, lexer.cursor),
+		Position: start,
+	}
 }
 
 // scanHexadecimal scans for a Hex Numeric Token. It must be invoked after
@@ -197,7 +207,11 @@ func (lexer *lexer) scanHexadecimal() Token {
 	}
 
 	// Extract the number from input and set as digits token literal
-	return Token{Kind: TokenHexNumber, Value: lexer.collectFrom(start)}
+	return Token{
+		Kind:     TokenHexNumber,
+		Literal:  lexer.collectBetween(start, lexer.cursor),
+		Position: start - 2,
+	}
 }
 
 // isDecChar returns true if ch is a decimal character
