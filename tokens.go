@@ -18,17 +18,18 @@ const (
 // Token represents a lexical Token.
 // It may be either a lone unicode character or some literal value
 type Token struct {
-	Kind  TokenKind
-	Value string
+	Kind     TokenKind
+	Literal  string
+	Position int
 }
 
 // UnicodeToken returns a Token for a given rune character.
 // The TokenKind of the returned Token has the same value as it's unicode code point.
-func UnicodeToken(char rune) Token {
-	return Token{TokenKind(char), string(char)}
+func UnicodeToken(char rune, pos int) Token {
+	return Token{TokenKind(char), string(char), pos}
 }
 
 // EOFToken returns an End of File Token
-func EOFToken() Token {
-	return Token{TokenEoF, ""}
+func EOFToken(pos int) Token {
+	return Token{TokenEoF, "", pos}
 }
