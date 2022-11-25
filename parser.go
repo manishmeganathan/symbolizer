@@ -143,11 +143,12 @@ func (parser *Parser) Unwrap(enc Enclosure) (string, error) {
 			return "", fmt.Errorf("missing end of enclosure: '%v'", string(enc.stop))
 		}
 
+		parser.Advance()
+
 		if nesting == 0 {
 			// If nesting is resolved, slice input and return
-			return parser.scanner.collectBetween(start, parser.curr.Position), nil
+			// The stop point is 1 position before enclose closer
+			return parser.scanner.collectBetween(start, parser.curr.Position-1), nil
 		}
-
-		parser.Advance()
 	}
 }
