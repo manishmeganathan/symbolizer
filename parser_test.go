@@ -45,50 +45,53 @@ func TestParser_Unwrap(t *testing.T) {
 	}
 
 	tests := []struct {
-		input   string
-		options []ParserOption
-		enclose Enclosure
-		output  string
-		error   string
+		input    string
+		options  []ParserOption
+		enclose  Enclosure
+		output   string
+		error    string
+		unparsed string
 	}{
 		{
-			"[string]", nil,
-			EnclosureSquare(), "string", "",
+			"[string]", nil, EnclosureSquare(),
+			"string", "", "",
 		},
 		{
-			"{map[string]string}", nil,
-			EnclosureCurly(), "map[string]string", "",
+			"{map[string]string}", nil, EnclosureCurly(),
+			"map[string]string", "", "",
 		},
 		{
-			"< mycroft  holmes >", []ParserOption{IgnoreWhitespaces()},
-			EnclosureAngle(), " mycroft  holmes ", "",
+			"< mycroft  holmes >", []ParserOption{IgnoreWhitespaces()}, EnclosureAngle(),
+			" mycroft  holmes ", "", "",
 		},
 		{
-			"@sarah[chapman&", nil,
-			mustEnclose(NewEnclosure('@', '&')), "sarah[chapman", "",
+			"@sarah[chapman&", nil, mustEnclose(NewEnclosure('@', '&')),
+			"sarah[chapman", "", "",
 		},
 		{
-			"( 12345(555))", []ParserOption{IgnoreWhitespaces()},
-			EnclosureParens(), " 12345(555)", "",
+			"( 12345(555))hello123", []ParserOption{IgnoreWhitespaces()}, EnclosureParens(),
+			" 12345(555)", "", "hello123",
 		},
 		{
-			"map(sequence[map])", nil,
-			EnclosureParens(), "", "missing start of enclosure: '('",
+			"map(sequence[map])", nil, EnclosureParens(),
+			"", "missing start of enclosure: '('", "map(sequence[map])",
 		},
 		{
-			"(map(sequence[map]", nil,
-			EnclosureParens(), "", "missing end of enclosure: ')'",
+			"(map(sequence[map]", nil, EnclosureParens(),
+			"", "missing end of enclosure: ')'", "",
 		},
 	}
 
 	for _, test := range tests {
 		parser := NewParser(test.input, test.options...)
 		unwrapped, err := parser.Unwrap(test.enclose)
-		assert.Equal(t, test.output, unwrapped)
+		assert.Equal(t, test.output, unwrapped, "Unwrapped Data Check")
 
 		if test.error != "" {
-			assert.EqualError(t, err, test.error)
+			assert.EqualError(t, err, test.error, "Error Check")
 		}
+
+		assert.Equal(t, test.unparsed, parser.Unparsed(), "Unparsed Data Check")
 	}
 }
 
