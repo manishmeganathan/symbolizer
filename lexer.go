@@ -70,13 +70,29 @@ func (lexer *lexer) next() (token Token) {
 	case symbol == '"':
 		token = lexer.scanString()
 
-	// Letter -> Scan for Identifier or Keyword
-	case unicode.IsLetter(symbol):
-		return lexer.scanIdentOrKeyword()
+	// Hex Prefix
+	case symbol == '0':
+		if lexer.peek() == 'x' {
+			return lexer.scanHexadecimal()
+		}
+
+		fallthrough
 
 	// Digit -> Scan for Numeric (Integer/Float)
 	case unicode.IsDigit(symbol):
 		return lexer.scanNumeric()
+
+	// Letter -> Scan for Identifier or Keyword
+	case unicode.IsLetter(symbol):
+		return lexer.scanIdentOrKeyword()
+
+	// Negative Sign -> Scan for Numeric
+	case symbol == '-':
+		if isDecChar(lexer.peek()) {
+			return lexer.scanNumeric()
+		}
+
+		fallthrough
 
 	default:
 		// Generate a token for the Unicode symbol
@@ -172,15 +188,12 @@ func (lexer *lexer) scanString() Token {
 // If it encounters '0x', it will attempt to read the rest of the
 // character as hexadecimal using scanHexadecimal
 func (lexer *lexer) scanNumeric() Token {
-	if lexer.char() == '0' && lexer.peek() == 'x' {
-		lexer.advanceCursor()
-		lexer.advanceCursor()
-
-		return lexer.scanHexadecimal()
-	}
-
 	// Retrieve the starting position of the number
 	start := lexer.cursor
+
+	if lexer.char() == '-' {
+		lexer.advanceCursor()
+	}
 
 	// Iterate over the input until characters are decimal characters
 	for isDecChar(lexer.char()) {
@@ -201,6 +214,9 @@ func (lexer *lexer) scanHexadecimal() Token {
 	// Retrieve the starting position of the identifier
 	start := lexer.cursor
 
+	lexer.advanceCursor()
+	lexer.advanceCursor()
+
 	// Iterate over the input until characters are hex characters
 	for isHexChar(lexer.char()) {
 		lexer.advanceCursor()
@@ -210,7 +226,7 @@ func (lexer *lexer) scanHexadecimal() Token {
 	return Token{
 		Kind:     TokenHexNumber,
 		Literal:  lexer.collectBetween(start, lexer.cursor),
-		Position: start - 2,
+		Position: start,
 	}
 }
 

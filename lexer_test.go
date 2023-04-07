@@ -7,7 +7,7 @@ import (
 )
 
 func TestLexer(t *testing.T) {
-	customKeywords := map[string]TokenKind{"classes": -10, "age": -11}
+	customKeywords := map[string]TokenKind{"classes": -10, "age": -11, "mark": -12}
 
 	tests := []struct {
 		input          string
@@ -122,7 +122,7 @@ func TestLexer(t *testing.T) {
 				UnicodeToken(' ', 10),
 				UnicodeToken('=', 11),
 				UnicodeToken(' ', 12),
-				{TokenHexNumber, "18", 13},
+				{TokenHexNumber, "0x18", 13},
 				EOFToken(17),
 			},
 			[]Token{
@@ -130,7 +130,7 @@ func TestLexer(t *testing.T) {
 				UnicodeToken('.', 6),
 				{TokenIdentifier, "age", 7},
 				UnicodeToken('=', 11),
-				{TokenHexNumber, "18", 13},
+				{TokenHexNumber, "0x18", 13},
 				EOFToken(17),
 			},
 			[]Token{
@@ -140,8 +140,39 @@ func TestLexer(t *testing.T) {
 				UnicodeToken(' ', 10),
 				UnicodeToken('=', 11),
 				UnicodeToken(' ', 12),
-				{TokenHexNumber, "18", 13},
+				{TokenHexNumber, "0x18", 13},
 				EOFToken(17),
+			},
+		},
+		{
+			"person.mark = -923",
+			[]Token{
+				{TokenIdentifier, "person", 0},
+				UnicodeToken('.', 6),
+				{TokenIdentifier, "mark", 7},
+				UnicodeToken(' ', 11),
+				UnicodeToken('=', 12),
+				UnicodeToken(' ', 13),
+				{TokenNumber, "-923", 14},
+				EOFToken(18),
+			},
+			[]Token{
+				{TokenIdentifier, "person", 0},
+				UnicodeToken('.', 6),
+				{TokenIdentifier, "mark", 7},
+				UnicodeToken('=', 12),
+				{TokenNumber, "-923", 14},
+				EOFToken(18),
+			},
+			[]Token{
+				{TokenIdentifier, "person", 0},
+				UnicodeToken('.', 6),
+				{-12, "mark", 7},
+				UnicodeToken(' ', 11),
+				UnicodeToken('=', 12),
+				UnicodeToken(' ', 13),
+				{TokenNumber, "-923", 14},
+				EOFToken(18),
 			},
 		},
 	}

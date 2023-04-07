@@ -25,6 +25,10 @@ func TestParser_Split(t *testing.T) {
 			"aaron delim grayl", []ParserOption{Keywords(map[string]TokenKind{"delim": -10}), IgnoreWhitespaces()},
 			-10, []string{"aaron", "grayl"},
 		},
+		{
+			"0x1888, -122452", []ParserOption{IgnoreWhitespaces()},
+			',', []string{"0x1888", "-122452"},
+		},
 	}
 
 	for _, test := range tests {
