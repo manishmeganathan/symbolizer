@@ -131,7 +131,7 @@ func TestParser_Peeking(t *testing.T) {
 	}{
 		{
 			"string&&string", nil, 2,
-			TokenIdentifier, true,
+			TokenIdent, true,
 		},
 		{
 			"[32]uint64", nil, 1,

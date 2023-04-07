@@ -129,7 +129,7 @@ func (lexer *lexer) consumeSpaces() {
 func (lexer *lexer) lookupKeyword(ident string) TokenKind {
 	// If no keywords available, immediately return TokenIdentifier
 	if lexer.config.keywords == nil {
-		return TokenIdentifier
+		return TokenIdent
 	}
 
 	// Retrieve the token kind for the ident from the keyword registry and return if it exists
@@ -138,7 +138,7 @@ func (lexer *lexer) lookupKeyword(ident string) TokenKind {
 		return tok
 	}
 
-	return TokenIdentifier
+	return TokenIdent
 }
 
 // scanIdentOrKeyword scans for an Identifier token, If the literal has a special

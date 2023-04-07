@@ -14,9 +14,10 @@ type TokenKind int32
 
 const (
 	TokenEoF TokenKind = -(iota + 1)
-	TokenIdentifier
+	TokenIdent
 	TokenNumber
 	TokenString
+	TokenBoolean
 	TokenHexNumber
 )
 
@@ -29,7 +30,7 @@ func (kind TokenKind) String() string {
 	switch kind {
 	case TokenEoF:
 		return "<eof>"
-	case TokenIdentifier:
+	case TokenIdent:
 		return "<ident>"
 	case TokenNumber:
 		return "<num>"
