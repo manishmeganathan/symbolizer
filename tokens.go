@@ -1,8 +1,11 @@
 package symbolizer
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 // TokenKind is an enum for representing token grouping/values.
@@ -43,12 +46,9 @@ func (kind TokenKind) String() string {
 	}
 }
 
-// Token represents a lexical Token.
-// It may be either a lone unicode character or some literal value
-type Token struct {
-	Kind     TokenKind
-	Literal  string
-	Position int
+// CanValue returns whether the TokenKind can be converted into a value
+func (kind TokenKind) CanValue() bool {
+	return kind == TokenNumber || kind == TokenString || kind == TokenBoolean || kind == TokenHexNumber
 }
 
 // UnicodeToken returns a Token for a given rune character.
@@ -60,6 +60,69 @@ func UnicodeToken(char rune, pos int) Token {
 // EOFToken returns an End of File Token
 func EOFToken(pos int) Token {
 	return Token{TokenEoF, "", pos}
+}
+
+// Token represents a lexical Token.
+// It may be either a lone unicode character or some literal value
+type Token struct {
+	Kind     TokenKind
+	Literal  string
+	Position int
+}
+
+// Value returns an object value for the Token.
+// If the Token is kind TokenString -> string (literal is returned as is)
+// If the Token is kind TokenBoolean -> bool (parsed with strconv.ParseBool)
+// If the Token is kind TokenNumber -> uint64/int64 (parsed with strconv depending on if a negative sign is present)
+// If the Token is kind TokenHexNumber -> []byte (decoded with hex.DecodeString after trimming the 0x)
+// All other Token kinds will return an error if attempted to convert to values
+func (token Token) Value() (any, error) {
+	switch token.Kind {
+
+	// String Value
+	case TokenString:
+		return token.Literal, nil
+
+	// Boolean Value
+	case TokenBoolean:
+		boolean, err := strconv.ParseBool(token.Literal)
+		if err != nil {
+			return nil, errors.New("invalid boolean token: could not parse as boolean")
+		}
+
+		return boolean, nil
+
+	// Hex Value
+	case TokenHexNumber:
+		data, err := hex.DecodeString(strings.TrimPrefix(token.Literal, "0x"))
+		if err != nil {
+			return nil, fmt.Errorf("invalid hex token: %w", err)
+		}
+
+		return data, nil
+
+	// Numeric Value
+	case TokenNumber:
+		// Negative Number
+		if strings.HasPrefix(token.Literal, "-") {
+			number, err := strconv.ParseInt(token.Literal, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("invalid signed numeric token: %w", err)
+			}
+
+			return number, nil
+		}
+
+		number, err := strconv.ParseUint(token.Literal, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid numeric token: %w", err)
+		}
+
+		return number, nil
+
+	default:
+		return nil, fmt.Errorf("cannot generate from value from token of kind '%v'", token.Kind)
+	}
 }
 
 // Enclosure is a tuple of unicode code points that indicate

@@ -7,8 +7,6 @@ import "fmt"
 type Parser struct {
 	// scanner represents the token scanner
 	scanner *lexer
-	// // trail represents a trailing cursor indicating the beginning of the current Token
-	// trail int
 	// curr and next represent the current and next Token values
 	curr, next Token
 }
