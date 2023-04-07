@@ -7,7 +7,12 @@ import (
 )
 
 func TestLexer(t *testing.T) {
-	customKeywords := map[string]TokenKind{"classes": -10, "age": -11, "mark": -12}
+	customKeywords := map[string]TokenKind{
+		"classes": -10,
+		"age":     -11,
+		"mark":    -12,
+		"True":    TokenBoolean,
+	}
 
 	tests := []struct {
 		input          string
@@ -34,6 +39,31 @@ func TestLexer(t *testing.T) {
 				{TokenKind(','), ",", 8},
 				{TokenKind('^'), "^", 9},
 				EOFToken(10),
+			},
+		},
+		{
+			"true = True",
+			[]Token{
+				{TokenBoolean, "true", 0},
+				UnicodeToken(' ', 4),
+				{TokenKind('='), "=", 5},
+				UnicodeToken(' ', 6),
+				{TokenIdent, "True", 7},
+				EOFToken(11),
+			},
+			[]Token{
+				{TokenBoolean, "true", 0},
+				{TokenKind('='), "=", 5},
+				{TokenIdent, "True", 7},
+				EOFToken(11),
+			},
+			[]Token{
+				{TokenBoolean, "true", 0},
+				UnicodeToken(' ', 4),
+				{TokenKind('='), "=", 5},
+				UnicodeToken(' ', 6),
+				{TokenBoolean, "True", 7},
+				EOFToken(11),
 			},
 		},
 		{
@@ -179,21 +209,21 @@ func TestLexer(t *testing.T) {
 
 	t.Run("Standard Lexer", func(t *testing.T) {
 		for _, test := range tests {
-			lex := lexer{0, []rune(test.input), &parseConfig{eatSpaces: false, keywords: nil}}
+			lex := lexer{0, []rune(test.input), newParseConfig()}
 			assert.Equal(t, test.standardOutput, lex.tokens())
 		}
 	})
 
 	t.Run("No Spaces Lexer", func(t *testing.T) {
 		for _, test := range tests {
-			lex := lexer{0, []rune(test.input), &parseConfig{eatSpaces: true, keywords: nil}}
+			lex := lexer{0, []rune(test.input), newParseConfig(IgnoreWhitespaces())}
 			assert.Equal(t, test.noSpaceOutput, lex.tokens())
 		}
 	})
 
 	t.Run("Custom Keyword Lexer", func(t *testing.T) {
 		for _, test := range tests {
-			lex := lexer{0, []rune(test.input), &parseConfig{eatSpaces: false, keywords: customKeywords}}
+			lex := lexer{0, []rune(test.input), newParseConfig(Keywords(customKeywords))}
 			assert.Equal(t, test.customOutput, lex.tokens())
 		}
 	})

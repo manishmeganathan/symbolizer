@@ -16,15 +16,13 @@ type Parser struct {
 // NewParser generates a new Parser for a given input string and some options that
 // modify the parser behaviour such as ignoring whitespaces or using custom keywords
 func NewParser(input string, opts ...ParserOption) *Parser {
-	// Create a new parseConfig and apply all the given options on it
-	config := new(parseConfig)
-	for _, option := range opts {
-		option(config)
+	// Create a parser instance with a token scanning lexer
+	parser := &Parser{
+		scanner: &lexer{
+			config:  newParseConfig(opts...),
+			symbols: []rune(input),
+		},
 	}
-
-	// Create a token scanning lexer for the input
-	scanner := &lexer{config: config, symbols: []rune(input)}
-	parser := &Parser{scanner: scanner}
 
 	// Advance the parser twice to initialize
 	// the curr and next Tokens of the parser
