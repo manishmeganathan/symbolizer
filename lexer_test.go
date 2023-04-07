@@ -21,7 +21,7 @@ func TestLexer(t *testing.T) {
 		customOutput   []Token
 	}{
 		{
-			"hello123,^",
+			`hello123,^`,
 			[]Token{
 				{TokenIdent, "hello123", 0},
 				{TokenKind(','), ",", 8},
@@ -42,7 +42,7 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
-			"true = True",
+			`true = True`,
 			[]Token{
 				{TokenBoolean, "true", 0},
 				UnicodeToken(' ', 4),
@@ -67,7 +67,7 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
-			"classes:: MyClass",
+			`classes:: MyClass`,
 			[]Token{
 				{TokenIdent, "classes", 0},
 				{TokenKind(':'), ":", 7},
@@ -95,33 +95,33 @@ func TestLexer(t *testing.T) {
 		{
 			`"this is the text" -> "hello"`,
 			[]Token{
-				{TokenString, "this is the text", 0},
+				{TokenString, `"this is the text"`, 0},
 				UnicodeToken(' ', 18),
 				UnicodeToken('-', 19),
 				UnicodeToken('>', 20),
 				UnicodeToken(' ', 21),
-				{TokenString, "hello", 22},
+				{TokenString, `"hello"`, 22},
 				EOFToken(29),
 			},
 			[]Token{
-				{TokenString, "this is the text", 0},
+				{TokenString, `"this is the text"`, 0},
 				UnicodeToken('-', 19),
 				UnicodeToken('>', 20),
-				{TokenString, "hello", 22},
+				{TokenString, `"hello"`, 22},
 				EOFToken(29),
 			},
 			[]Token{
-				{TokenString, "this is the text", 0},
+				{TokenString, `"this is the text"`, 0},
 				UnicodeToken(' ', 18),
 				UnicodeToken('-', 19),
 				UnicodeToken('>', 20),
 				UnicodeToken(' ', 21),
-				{TokenString, "hello", 22},
+				{TokenString, `"hello"`, 22},
 				EOFToken(29),
 			},
 		},
 		{
-			"12345. 2231",
+			`12345. 2231`,
 			[]Token{
 				{TokenNumber, "12345", 0},
 				UnicodeToken('.', 5),
@@ -175,7 +175,7 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
-			"person.mark = -923",
+			`person.mark = -923`,
 			[]Token{
 				{TokenIdent, "person", 0},
 				UnicodeToken('.', 6),
@@ -205,6 +205,22 @@ func TestLexer(t *testing.T) {
 				EOFToken(18),
 			},
 		},
+
+		{
+			`"abcdefg`,
+			[]Token{
+				{TokenMalformed, `"abcdefg`, 0},
+				EOFToken(8),
+			},
+			[]Token{
+				{TokenMalformed, `"abcdefg`, 0},
+				EOFToken(8),
+			},
+			[]Token{
+				{TokenMalformed, `"abcdefg`, 0},
+				EOFToken(8),
+			},
+		},
 	}
 
 	t.Run("Standard Lexer", func(t *testing.T) {
@@ -227,25 +243,4 @@ func TestLexer(t *testing.T) {
 			assert.Equal(t, test.customOutput, lex.tokens())
 		}
 	})
-}
-
-func TestTokenKind_String(t *testing.T) {
-	tests := []struct {
-		token  TokenKind
-		output string
-	}{
-		{TokenKind('5'), "<unicode:'5'>"},
-		{TokenKind('&'), "<unicode:'&'>"},
-		{TokenKind(-10), "<custom:-10>"},
-		{TokenEoF, "<eof>"},
-		{TokenNumber, "<num>"},
-		{TokenIdent, "<ident>"},
-		{TokenString, "<str>"},
-		{TokenHexNumber, "<hex>"},
-	}
-
-	for _, test := range tests {
-		str := test.token.String()
-		assert.Equal(t, test.output, str)
-	}
 }

@@ -17,6 +17,8 @@ type TokenKind int32
 
 const (
 	TokenEoF TokenKind = -(iota + 1)
+	TokenMalformed
+
 	TokenIdent
 	TokenNumber
 	TokenString
@@ -33,10 +35,14 @@ func (kind TokenKind) String() string {
 	switch kind {
 	case TokenEoF:
 		return "<eof>"
+	case TokenMalformed:
+		return "<malformed>"
 	case TokenIdent:
 		return "<ident>"
 	case TokenNumber:
 		return "<num>"
+	case TokenBoolean:
+		return "<bool>"
 	case TokenString:
 		return "<str>"
 	case TokenHexNumber:
@@ -81,7 +87,7 @@ func (token Token) Value() (any, error) {
 
 	// String Value
 	case TokenString:
-		return token.Literal, nil
+		return strings.Trim(token.Literal, `"`), nil
 
 	// Boolean Value
 	case TokenBoolean:

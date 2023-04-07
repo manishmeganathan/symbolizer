@@ -164,23 +164,36 @@ func (lexer *lexer) scanIdentOrKeyword() Token {
 
 // scanString scans for a String token by collecting characters until another '"' is encountered.
 func (lexer *lexer) scanString() Token {
-	// Retrieve the starting position of the number (after the ")
-	start := lexer.cursor + 1
+	// Retrieve the starting position
+	start := lexer.cursor
 
 	// Iterate over the input until an " or eof is encountered
 	for {
 		lexer.advanceCursor()
 
-		if lexer.char() == '"' || lexer.char() == rune(TokenEoF) {
+		if lexer.char() == '"' {
 			break
+		}
+
+		// If EoF encountered prematurely, return malformed token
+		if lexer.char() == rune(TokenEoF) {
+			token := Token{
+				Kind:     TokenMalformed,
+				Literal:  lexer.collectBetween(start, lexer.cursor),
+				Position: start,
+			}
+
+			lexer.cursor--
+			return token
 		}
 	}
 
 	// Extract the string from input and set as text token literal
+	// Includes the quote characters as well
 	return Token{
 		Kind:     TokenString,
-		Literal:  lexer.collectBetween(start, lexer.cursor),
-		Position: start - 1,
+		Literal:  lexer.collectBetween(start, lexer.cursor+1),
+		Position: start,
 	}
 }
 
