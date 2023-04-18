@@ -24,7 +24,8 @@ func (lexer *lexer) char() rune {
 // This look ahead is performed without moving the Lexer's cursor.
 // If the Lexer tap is exhausted, an EoF rune is returned.
 func (lexer *lexer) peek() rune {
-	if lexer.done() {
+	// If lexer is done or cannot peek, return EoF
+	if lexer.done() || lexer.cursor+1 == len(lexer.symbols) {
 		return rune(TokenEoF)
 	}
 
